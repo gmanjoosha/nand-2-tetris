@@ -25,7 +25,7 @@ public class JackCompiler {
             } else if (inputFile.isDirectory()) {
                 jackFiles = readJackFilesInDir(inputFile);
                 if (jackFiles.isEmpty()) {
-                    throw new IllegalArgumentException("No jack file in this directory");
+                    throw new IllegalArgumentException("Jack file expected");
                 }
             }
             jackFiles.stream().flatMap(jackFile -> Stream.of(jackFile)

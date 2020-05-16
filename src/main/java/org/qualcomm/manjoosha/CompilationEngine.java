@@ -4,7 +4,7 @@ import java.io.File;
 
 public class CompilationEngine {
 
-    private final VMCodeWriter vmCodeWriter;
+    private final VMCodeGenerator vmCodeGenerator;
     private final JackTokenizer jackTokenizer;
     private final SymbolTable symbolTable;
     private String currentClass;
@@ -14,7 +14,7 @@ public class CompilationEngine {
 
     public CompilationEngine(File inputFile, File outputFile) {
         jackTokenizer = new JackTokenizer(inputFile);
-        vmCodeWriter = new VMCodeWriter(outputFile);
+        vmCodeGenerator = new VMCodeGenerator(outputFile);
         symbolTable = new SymbolTable();
         labelIndex = 0;
     }
@@ -54,7 +54,7 @@ public class CompilationEngine {
         if (jackTokenizer.hasNextToken()) {
             throw new IllegalStateException("Unexpected tokens");
         }
-        vmCodeWriter.close();
+        vmCodeGenerator.close();
     }
 
     private void checkForKeyWordClass() {
@@ -126,7 +126,6 @@ public class CompilationEngine {
 
         symbolTable.startSubroutine();
 
-        //for method this is the first argument
         if (jackTokenizer.keyWord() == JackTokenizer.KEYWORD.METHOD) {
             symbolTable.define("this", currentClass, Symbol.Kind.ARG);
         }
@@ -136,7 +135,6 @@ public class CompilationEngine {
             jackTokenizer.previous();
         }
 
-        //subroutineName which is a identifier
         jackTokenizer.next();
         if (jackTokenizer.tokenType() != JackTokenizer.TYPE.IDENTIFIER) {
             unexpectedToken("subroutineName");
@@ -152,24 +150,24 @@ public class CompilationEngine {
     private void compileSubroutineBody(JackTokenizer.KEYWORD keyword) {
         expectedSymbol('{');
         compileVarDec();
-        writeFunctionDec(keyword);
-        compileStatement();
+        genFunctionDec(keyword);
+        compileStatements();
         expectedSymbol('}');
     }
 
-    private void writeFunctionDec(JackTokenizer.KEYWORD keyword) {
-        vmCodeWriter.writeFunction(currentFunction(), symbolTable.varCount(Symbol.Kind.VAR));
+    private void genFunctionDec(JackTokenizer.KEYWORD keyword) {
+        vmCodeGenerator.genFunction(currentFunction(), symbolTable.varCount(Symbol.Kind.VAR));
         if (keyword == JackTokenizer.KEYWORD.METHOD) {
-            vmCodeWriter.writePush(VMCodeWriter.SEGMENT.ARG, 0);
-            vmCodeWriter.writePop(VMCodeWriter.SEGMENT.POINTER, 0);
+            vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.ARG, 0);
+            vmCodeGenerator.genPop(VMCodeGenerator.SEGMENT.POINTER, 0);
         } else if (keyword == JackTokenizer.KEYWORD.CONSTRUCTOR) {
-            vmCodeWriter.writePush(VMCodeWriter.SEGMENT.CONST, symbolTable.varCount(Symbol.Kind.FIELD));
-            vmCodeWriter.writeCall("Memory.alloc", 1);
-            vmCodeWriter.writePop(VMCodeWriter.SEGMENT.POINTER, 0);
+            vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.CONST, symbolTable.varCount(Symbol.Kind.FIELD));
+            vmCodeGenerator.genCall("Memory.alloc", 1);
+            vmCodeGenerator.genPop(VMCodeGenerator.SEGMENT.POINTER, 0);
         }
     }
 
-    private void compileStatement() {
+    private void compileStatements() {
         jackTokenizer.next();
 
         if (jackTokenizer.tokenType() == JackTokenizer.TYPE.SYMBOL && jackTokenizer.symbol() == '}') {
@@ -190,7 +188,7 @@ public class CompilationEngine {
             }
         }
 
-        compileStatement();
+        compileStatements();
     }
 
     private void compileParameterList() {
@@ -253,7 +251,7 @@ public class CompilationEngine {
     private void compileDo() {
         compileSubroutineCall();
         expectedSymbol(';');
-        vmCodeWriter.writePop(VMCodeWriter.SEGMENT.TEMP, 0);
+        vmCodeGenerator.genPop(VMCodeGenerator.SEGMENT.TEMP, 0);
     }
 
     private void compileLet() {
@@ -268,36 +266,36 @@ public class CompilationEngine {
             unexpectedToken("'['|'='");
         }
 
-        var expExist = false;
+        var isexp = false;
         if (jackTokenizer.symbol() == '[') {
-            expExist = true;
-            vmCodeWriter.writePush(getSeg(symbolTable.kindOf(varName)), symbolTable.indexOf(varName));
+            isexp = true;
+            vmCodeGenerator.genPush(getSeg(symbolTable.kindOf(varName)), symbolTable.indexOf(varName));
             compileExpression();
             expectedSymbol(']');
-            vmCodeWriter.writeArithmetic(VMCodeWriter.COMMAND.ADD);
+            vmCodeGenerator.genArithmetic(VMCodeGenerator.COMMAND.ADD);
         }
 
-        if (expExist) jackTokenizer.next();
+        if (isexp) jackTokenizer.next();
         compileExpression();
         expectedSymbol(';');
 
-        if (expExist) {
-            vmCodeWriter.writePop(VMCodeWriter.SEGMENT.TEMP, 0);
-            vmCodeWriter.writePop(VMCodeWriter.SEGMENT.POINTER, 1);
-            vmCodeWriter.writePush(VMCodeWriter.SEGMENT.TEMP, 0);
-            vmCodeWriter.writePop(VMCodeWriter.SEGMENT.THAT, 0);
+        if (isexp) {
+            vmCodeGenerator.genPop(VMCodeGenerator.SEGMENT.TEMP, 0);
+            vmCodeGenerator.genPop(VMCodeGenerator.SEGMENT.POINTER, 1);
+            vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.TEMP, 0);
+            vmCodeGenerator.genPop(VMCodeGenerator.SEGMENT.THAT, 0);
         } else {
-            vmCodeWriter.writePop(getSeg(symbolTable.kindOf(varName)), symbolTable.indexOf(varName));
+            vmCodeGenerator.genPop(getSeg(symbolTable.kindOf(varName)), symbolTable.indexOf(varName));
         }
     }
 
-    private VMCodeWriter.SEGMENT getSeg(Symbol.Kind kind) {
+    private VMCodeGenerator.SEGMENT getSeg(Symbol.Kind kind) {
         return switch (kind) {
-            case FIELD -> VMCodeWriter.SEGMENT.THIS;
-            case STATIC -> VMCodeWriter.SEGMENT.STATIC;
-            case VAR -> VMCodeWriter.SEGMENT.LOCAL;
-            case ARG -> VMCodeWriter.SEGMENT.ARG;
-            default -> VMCodeWriter.SEGMENT.NONE;
+            case FIELD -> VMCodeGenerator.SEGMENT.THIS;
+            case STATIC -> VMCodeGenerator.SEGMENT.STATIC;
+            case VAR -> VMCodeGenerator.SEGMENT.LOCAL;
+            case ARG -> VMCodeGenerator.SEGMENT.ARG;
+            default -> VMCodeGenerator.SEGMENT.NONE;
         };
 
     }
@@ -305,7 +303,7 @@ public class CompilationEngine {
     private void compileWhile() {
         var continueLabel = newLabel();
         var topLabel = newLabel();
-        vmCodeWriter.writeLabel(topLabel);
+        vmCodeGenerator.genLabel(topLabel);
 
         compileBlock(continueLabel, topLabel);
     }
@@ -314,13 +312,13 @@ public class CompilationEngine {
         expectedSymbol('(');
         compileExpression();
         expectedSymbol(')');
-        vmCodeWriter.writeArithmetic(VMCodeWriter.COMMAND.NOT);
-        vmCodeWriter.writeIf(label1);
+        vmCodeGenerator.genArithmetic(VMCodeGenerator.COMMAND.NOT);
+        vmCodeGenerator.genIf(label1);
         expectedSymbol('{');
-        compileStatement();
+        compileStatements();
         expectedSymbol('}');
-        vmCodeWriter.writeGoto(label2);
-        vmCodeWriter.writeLabel(label1);
+        vmCodeGenerator.genGoto(label2);
+        vmCodeGenerator.genLabel(label1);
     }
 
     private String newLabel() {
@@ -331,13 +329,13 @@ public class CompilationEngine {
         jackTokenizer.next();
 
         if (jackTokenizer.tokenType() == JackTokenizer.TYPE.SYMBOL && jackTokenizer.symbol() == ';') {
-            vmCodeWriter.writePush(VMCodeWriter.SEGMENT.CONST, 0);
+            vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.CONST, 0);
         } else {
             jackTokenizer.previous();
             compileExpression();
             expectedSymbol(';');
         }
-        vmCodeWriter.writeReturn();
+        vmCodeGenerator.genReturn();
 
     }
 
@@ -348,29 +346,29 @@ public class CompilationEngine {
         jackTokenizer.next();
         if (jackTokenizer.tokenType() == JackTokenizer.TYPE.KEYWORD && jackTokenizer.keyWord() == JackTokenizer.KEYWORD.ELSE) {
             expectedSymbol('{');
-            compileStatement();
+            compileStatements();
             expectedSymbol('}');
         } else {
             jackTokenizer.previous();
         }
-        vmCodeWriter.writeLabel(endLabel);
+        vmCodeGenerator.genLabel(endLabel);
     }
 
     private void compileTerm() {
         jackTokenizer.next();
         if (jackTokenizer.tokenType() == JackTokenizer.TYPE.IDENTIFIER) {
-            var tempId = jackTokenizer.identifier();
+            var id = jackTokenizer.identifier();
             jackTokenizer.next();
             if (jackTokenizer.tokenType() == JackTokenizer.TYPE.SYMBOL) {
                 final var symbol = jackTokenizer.symbol();
                 switch (symbol) {
                     case '[' -> {
-                        vmCodeWriter.writePush(getSeg(symbolTable.kindOf(tempId)), symbolTable.indexOf(tempId));
+                        vmCodeGenerator.genPush(getSeg(symbolTable.kindOf(id)), symbolTable.indexOf(id));
                         compileExpression();
                         expectedSymbol(']');
-                        vmCodeWriter.writeArithmetic(VMCodeWriter.COMMAND.ADD);
-                        vmCodeWriter.writePop(VMCodeWriter.SEGMENT.POINTER, 1);
-                        vmCodeWriter.writePush(VMCodeWriter.SEGMENT.THAT, 0);
+                        vmCodeGenerator.genArithmetic(VMCodeGenerator.COMMAND.ADD);
+                        vmCodeGenerator.genPop(VMCodeGenerator.SEGMENT.POINTER, 1);
+                        vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.THAT, 0);
                     }
                     case '(', '.' -> {
                         jackTokenizer.previous();
@@ -379,34 +377,34 @@ public class CompilationEngine {
                     }
                     default -> {
                         jackTokenizer.previous();
-                        vmCodeWriter.writePush(getSeg(symbolTable.kindOf(tempId)), symbolTable.indexOf(tempId));
+                        vmCodeGenerator.genPush(getSeg(symbolTable.kindOf(id)), symbolTable.indexOf(id));
                     }
                 }
             } else {
                 jackTokenizer.previous();
-                vmCodeWriter.writePush(getSeg(symbolTable.kindOf(tempId)), symbolTable.indexOf(tempId));
+                vmCodeGenerator.genPush(getSeg(symbolTable.kindOf(id)), symbolTable.indexOf(id));
             }
         } else {
             if (jackTokenizer.tokenType() == JackTokenizer.TYPE.INT_CONST) {
-                vmCodeWriter.writePush(VMCodeWriter.SEGMENT.CONST, jackTokenizer.intVal());
+                vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.CONST, jackTokenizer.intVal());
             } else if (jackTokenizer.tokenType() == JackTokenizer.TYPE.STRING_CONST) {
                 var str = jackTokenizer.stringVal();
 
-                vmCodeWriter.writePush(VMCodeWriter.SEGMENT.CONST, str.length());
-                vmCodeWriter.writeCall("String.new", 1);
+                vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.CONST, str.length());
+                vmCodeGenerator.genCall("String.new", 1);
 
                 for (var c : str.toCharArray()) {
-                    vmCodeWriter.writePush(VMCodeWriter.SEGMENT.CONST, c);
-                    vmCodeWriter.writeCall("String.appendChar", 2);
+                    vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.CONST, c);
+                    vmCodeGenerator.genCall("String.appendChar", 2);
                 }
             } else if (jackTokenizer.tokenType() == JackTokenizer.TYPE.KEYWORD) {
                 if (jackTokenizer.keyWord() == JackTokenizer.KEYWORD.TRUE) {
-                    vmCodeWriter.writePush(VMCodeWriter.SEGMENT.CONST, 0);
-                    vmCodeWriter.writeArithmetic(VMCodeWriter.COMMAND.NOT);
+                    vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.CONST, 0);
+                    vmCodeGenerator.genArithmetic(VMCodeGenerator.COMMAND.NOT);
                 } else if (jackTokenizer.keyWord() == JackTokenizer.KEYWORD.THIS) {
-                    vmCodeWriter.writePush(VMCodeWriter.SEGMENT.POINTER, 0);
+                    vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.POINTER, 0);
                 } else if (jackTokenizer.keyWord() == JackTokenizer.KEYWORD.FALSE || jackTokenizer.keyWord() == JackTokenizer.KEYWORD.NULL) {
-                    vmCodeWriter.writePush(VMCodeWriter.SEGMENT.CONST, 0);
+                    vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.CONST, 0);
                 }
             } else if (jackTokenizer.tokenType() == JackTokenizer.TYPE.SYMBOL) {
                 final var symbol = jackTokenizer.symbol();
@@ -418,9 +416,9 @@ public class CompilationEngine {
                     case '-', '~' -> {
                         compileTerm();
                         if (symbol == '-') {
-                            vmCodeWriter.writeArithmetic(VMCodeWriter.COMMAND.NEG);
+                            vmCodeGenerator.genArithmetic(VMCodeGenerator.COMMAND.NEG);
                         } else {
-                            vmCodeWriter.writeArithmetic(VMCodeWriter.COMMAND.NOT);
+                            vmCodeGenerator.genArithmetic(VMCodeGenerator.COMMAND.NOT);
                         }
                     }
                 }
@@ -443,10 +441,10 @@ public class CompilationEngine {
         if (jackTokenizer.tokenType() == JackTokenizer.TYPE.SYMBOL) {
             switch (jackTokenizer.symbol()) {
                 case '(' -> {
-                    vmCodeWriter.writePush(VMCodeWriter.SEGMENT.POINTER, 0);
+                    vmCodeGenerator.genPush(VMCodeGenerator.SEGMENT.POINTER, 0);
                     num = compileExpressionList() + 1;
                     expectedSymbol(')');
-                    vmCodeWriter.writeCall(currentClass + '.' + name, num);
+                    vmCodeGenerator.genCall(currentClass + '.' + name, num);
                 }
                 case '.' -> {
                     var objName = name;
@@ -461,14 +459,14 @@ public class CompilationEngine {
                         case "" -> name = objName + "." + name;
                         default -> {
                             num = 1;
-                            vmCodeWriter.writePush(getSeg(symbolTable.kindOf(objName)), symbolTable.indexOf(objName));
+                            vmCodeGenerator.genPush(getSeg(symbolTable.kindOf(objName)), symbolTable.indexOf(objName));
                             name = symbolTable.typeOf(objName) + "." + name;
                         }
                     }
                     expectedSymbol('(');
                     num += compileExpressionList();
                     expectedSymbol(')');
-                    vmCodeWriter.writeCall(name, num);
+                    vmCodeGenerator.genCall(name, num);
                 }
                 default -> unexpectedToken("'('|'.'");
             }
@@ -497,7 +495,7 @@ public class CompilationEngine {
                     default -> unexpectedToken("Unknown op!");
                 }
                 compileTerm();
-                vmCodeWriter.writeCommand(opCmd, "", "");
+                vmCodeGenerator.genCommand(opCmd, "", "");
 
             } else {
                 jackTokenizer.previous();

@@ -11,15 +11,8 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * Created by xuchen on 11/17/14.
- * tokenizer
- * 1.Removes all comments and white space from the input stream
- * 2.breaks it into Jack-language tokens, as specified by the Jack grammar.
- */
 public class JackTokenizer {
 
-    //constant for type
     public enum TYPE {
         KEYWORD,
         SYMBOL,
@@ -29,7 +22,6 @@ public class JackTokenizer {
         NONE
     }
 
-    //constant for keyword
     public enum KEYWORD {
         CLASS,
         METHOD, FUNCTION, CONSTRUCTOR,
@@ -99,8 +91,8 @@ public class JackTokenizer {
     }
 
     public JackTokenizer(File jackFile) {
-        var preprocessed = readAndConcatAllLines(jackFile);
-        var tokenMatcher = tokenPatterns.matcher(preprocessed);
+        var parsed = readAndConcatAllLines(jackFile);
+        var tokenMatcher = tokenPatterns.matcher(parsed);
         tokens = new ArrayList<>();
         pointer = 0;
         while (tokenMatcher.find()) {
@@ -159,7 +151,7 @@ public class JackTokenizer {
         if (currentTokenType == TYPE.KEYWORD) {
             return KEYWORD_TO_STRING.get(currentToken);
         } else {
-            throw new IllegalStateException("Current token is not a keyword!");
+            throw new IllegalStateException(" keyword token expected!");
         }
     }
     
@@ -167,7 +159,7 @@ public class JackTokenizer {
         if (currentTokenType == TYPE.SYMBOL) {
             return currentToken.charAt(0);
         } else {
-            throw new IllegalStateException("Current token is not a symbol!");
+            throw new IllegalStateException("symbol token expected!");
         }
     }
     
@@ -175,7 +167,7 @@ public class JackTokenizer {
         if (currentTokenType == TYPE.IDENTIFIER) {
             return currentToken;
         } else {
-            throw new IllegalStateException("Current token is not an identifier! current type:" + currentTokenType);
+            throw new IllegalStateException("identifier is expected! current type:" + currentTokenType);
         }
     }
     
@@ -183,7 +175,7 @@ public class JackTokenizer {
         if (currentTokenType == TYPE.INT_CONST) {
             return Integer.parseInt(currentToken);
         } else {
-            throw new IllegalStateException("Current token is not an integer constant!");
+            throw new IllegalStateException("Integer constant is expected!");
         }
     }
     

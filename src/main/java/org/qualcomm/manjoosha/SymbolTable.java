@@ -49,24 +49,12 @@ public class SymbolTable {
         return symbol != null ? symbol.getKind() : Symbol.Kind.NONE;
     }
 
-    /**
-     * returns the type of the named identifier in the current scope
-     *
-     * @param name
-     * @return
-     */
     public String typeOf(String name) {
         var symbol = lookUp(name);
         if (symbol != null) return symbol.getType();
         return "";
     }
 
-    /**
-     * returns the index assigned to the named identifier
-     *
-     * @param name
-     * @return
-     */
     public int indexOf(String name) {
 
         var symbol = lookUp(name);
@@ -76,12 +64,6 @@ public class SymbolTable {
         return -1;
     }
 
-    /**
-     * check if target symbol is exist
-     *
-     * @param name
-     * @return
-     */
     private Symbol lookUp(String name) {
         if (classSymbols.get(name) != null) {
             return classSymbols.get(name);
