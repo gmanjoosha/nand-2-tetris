@@ -1,0 +1,37 @@
+
+g
+java:S11929"JDefine a constant instead of duplicating this literal "<keyword>" 8 times.(›®·¯8Ïøìâ¡.
+j
+java:S11929"MDefine a constant instead of duplicating this literal "</keyword>\n" 8 times.(›®·¯8Ïøìâ¡.
+s
+java:S1192>"QDefine a constant instead of duplicating this literal "</identifier>\n" 22 times.(ûÄƒ¿ÿÿÿÿÿ8­Šñâ¡.
+E
+java:S1148,"#Use a logger to log this exception.(€ÉÔ…ıÿÿÿÿ8ûÁäâ¡.
+p
+java:S1192>"NDefine a constant instead of duplicating this literal "<identifier>" 22 times.(ûÄƒ¿ÿÿÿÿÿ8­Šñâ¡.
+m
+java:S1192‡"ODefine a constant instead of duplicating this literal "<statements>\n" 4 times.(¯®æÚ8µƒÍã¡.
+n
+java:S1192œ"KDefine a constant instead of duplicating this literal "identifier" 5 times.(æÀö€øÿÿÿÿ8µƒÍã¡.
+n
+java:S1192‰"PDefine a constant instead of duplicating this literal "</statements>\n" 4 times.(©¬Èœ8µƒÍã¡.
+s
+java:S1192«"UDefine a constant instead of duplicating this literal "<symbol>,</symbol>\n" 8 times.(çµÆÉ8µƒÍã¡.
+g
+java:S1192—"IDefine a constant instead of duplicating this literal "<symbol>" 6 times.(ºµˆ©8µƒÍã¡.
+x
+java:S1192"UDefine a constant instead of duplicating this literal "<symbol>(</symbol>\n" 4 times.(˜¥ôôûÿÿÿÿ8µƒÍã¡.
+x
+java:S1192Ğ"UDefine a constant instead of duplicating this literal "<symbol>[</symbol>\n" 4 times.(„øˆ¼ÿÿÿÿÿ8µƒÍã¡.
+j
+java:S1192—"LDefine a constant instead of duplicating this literal "</symbol>\n" 6 times.(ºµˆ©8µƒÍã¡.
+s
+java:S1192°"UDefine a constant instead of duplicating this literal "<symbol>;</symbol>\n" 6 times.(çÔÅÚ8µƒÍã¡.
+t
+java:S3776q"RRefactor this method to reduce its Cognitive Complexity from 17 to the 15 allowed.(µáÎüÿÿÿÿ8µƒÍã¡.
+u
+java:S3776ß"RRefactor this method to reduce its Cognitive Complexity from 21 to the 15 allowed.(µáÎüÿÿÿÿ8µƒÍã¡.
+T
+java:S1481•"1Remove this unused "varNamesDone" local variable.(µáÎüÿÿÿÿ8µƒÍã¡.
+T
+java:S1481ô"1Remove this unused "varNamesDone" local variable.(µáÎüÿÿÿÿ8µƒÍã¡.

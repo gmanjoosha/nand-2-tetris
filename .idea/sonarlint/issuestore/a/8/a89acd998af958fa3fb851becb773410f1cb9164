@@ -1,0 +1,5 @@
+
+N	java:S106"9Replace this use of System.out or System.err by a logger.(Χρη
+S	java:S106""9Replace this use of System.out or System.err by a logger.(Μ„Ύόÿÿÿÿ
+<
+java:S3864""!Remove this use of "Stream.peek".(Μ„Ύόÿÿÿÿ
